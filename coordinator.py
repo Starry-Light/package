@@ -5,7 +5,7 @@ busy = False
 queue = []
 lock = threading.Lock()
 
-def handle_client(client):
+def handle_client(client,addr):
     global busy
 
     while True:
@@ -14,18 +14,24 @@ def handle_client(client):
         if not message:
             break
 
-        with lock:
+        with lock: 
             if message == "REQUEST":
+                print(f'REQUEST FROM: {addr}')       
                 if not busy:
                     busy = True
                     client.sendall("GRANT".encode())
+                    print(f'GRANTED')
                 else:
+                    print('DEFERRED')
                     queue.append(client)
 
             elif message == "RELEASE":
+                print(f'RELEASED BY ${addr}')
                 if queue:
                     next_client = queue.pop(0)
                     next_client.sendall("GRANT".encode())
+                    print(f'GRANTED TO ${next_client}')
+
                 else:
                     busy = False
 
@@ -39,9 +45,9 @@ print("Coordinator is running...")
 
 while True:
     client_socket, addr = server_socket.accept()
-
+    print(f'Client ${addr} connected to server')
     thread = threading.Thread(
         target=handle_client,
-        args=(client_socket,)
+        args=(client_socket,addr)
     )
     thread.start()
